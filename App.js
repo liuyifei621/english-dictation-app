@@ -15,7 +15,7 @@ const sample = [
   { word: 'outstanding', pos: 'adj.', meaning: '杰出的；未解决的' },
   { word: 'suburb', pos: 'n.', meaning: '郊区' },
 ];
-const EXTRACTION_API_URL = process.env.EXPO_PUBLIC_EXTRACTION_API_URL || 'http://localhost:8787/extract';
+const EXTRACTION_API_URL = process.env.EXPO_PUBLIC_EXTRACTION_API_URL || 'https://english-dictation-app.onrender.com/extract';
 
 export default function App() {
   const [entries, setEntries] = useState(sample);
