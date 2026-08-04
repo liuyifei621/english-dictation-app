@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
@@ -50,21 +50,36 @@ export default function App() {
   const current = sessionEntries[index] || entries[0] || sample[0];
   const shownPrompt = mode === 'cn' ? `${current.meaning}` : current.word;
 
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); activeRef.current = false; Speech.stop(); soundRef.current?.unloadAsync(); }, []);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); activeRef.current = false; Speech.stop(); if (Platform.OS === 'web') window.speechSynthesis?.cancel(); soundRef.current?.unloadAsync(); }, []);
 
   const speakRepeated = (entry, done) => {
     const text = mode === 'cn' ? entry.meaning : entry.word;
     let count = 0;
+    const speakOnce = (onDone) => {
+      let finished = false;
+      const finish = () => { if (finished) return; finished = true; onDone?.(); };
+      const fallbackMs = Math.max(1800, Math.min(6000, text.length * 220));
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        const utterance = new window.SpeechSynthesisUtterance(text);
+        utterance.lang = mode === 'cn' ? 'zh-CN' : 'en-US';
+        utterance.rate = 0.82;
+        utterance.onend = finish;
+        utterance.onerror = finish;
+        window.speechSynthesis.speak(utterance);
+        setTimeout(finish, fallbackMs);
+        return;
+      }
+      Speech.speak(text, { language: mode === 'cn' ? 'zh-CN' : 'en-US', rate: 0.82, onDone: finish, onError: finish });
+      setTimeout(finish, fallbackMs);
+    };
     const play = () => {
       if (!activeRef.current && done) return;
       count += 1;
-      if (mode === 'cn') {
-        Speech.speak(text, { language: 'zh-CN', rate: 0.82, onDone: () => count < repeatCount ? play() : done?.() });
-        return;
-      }
+      if (mode === 'cn') { speakOnce(() => count < repeatCount ? play() : done?.()); return; }
       findEnglishAudio(entry.word).then(async (url) => {
         if (!url) {
-          Speech.speak(text, { language: 'en-US', rate: 0.82, onDone: () => count < repeatCount ? play() : done?.() });
+          speakOnce(() => count < repeatCount ? play() : done?.());
           return;
         }
         soundRef.current?.unloadAsync();
@@ -95,7 +110,7 @@ export default function App() {
 
   const stop = () => {
     if (timer.current) clearTimeout(timer.current);
-    Speech.stop(); activeRef.current = false; soundRef.current?.stopAsync().catch(() => {}); soundRef.current?.unloadAsync().catch(() => {}); soundRef.current = null; setRunning(false); setAnswerVisible(true);
+    Speech.stop(); if (Platform.OS === 'web') window.speechSynthesis?.cancel(); activeRef.current = false; soundRef.current?.stopAsync().catch(() => {}); soundRef.current?.unloadAsync().catch(() => {}); soundRef.current = null; setRunning(false); setAnswerVisible(true);
   };
 
   /* 保留一个显式的手动推进入口，便于后续增加“下一个”按钮。 */
