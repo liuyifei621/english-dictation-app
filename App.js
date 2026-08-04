@@ -172,7 +172,7 @@ export default function App() {
 
   return <SafeAreaView style={styles.safe}><StatusBar style="dark" /><ScrollView contentContainerStyle={styles.page}>
     <Text style={styles.eyebrow}>ENGLISH DICTATION</Text><Text style={styles.title}>英语默写</Text>
-    <Text style={styles.subtitle}>当前词库：{sourceName} · 上传后按自己的节奏听写。</Text>
+    <Text style={styles.subtitle}>当前词库：{sourceName} · 共 {entries.length} 个单词 · 上传后按自己的节奏听写。</Text>
     <Pressable style={styles.upload} onPress={pickFile}><Text style={styles.uploadIcon}>＋</Text><View><Text style={styles.uploadTitle}>上传词汇文档</Text><Text style={styles.uploadHint}>支持 Word、PDF、图片</Text></View></Pressable>
     <View style={styles.card}><Text style={styles.sectionLabel}>默写模式</Text><View style={styles.segment}><Pressable onPress={() => setMode('cn')} style={[styles.segmentItem, mode === 'cn' && styles.segmentActive]}><Text style={mode === 'cn' ? styles.segmentTextActive : styles.segmentText}>中文 → 英文</Text></Pressable><Pressable onPress={() => setMode('en')} style={[styles.segmentItem, mode === 'en' && styles.segmentActive]}><Text style={mode === 'en' ? styles.segmentTextActive : styles.segmentText}>英文 → 中文</Text></Pressable></View>
       <Text style={styles.sectionLabel}>出题顺序</Text><View style={styles.segment}><Pressable onPress={() => setOrder('sequence')} style={[styles.segmentItem, order === 'sequence' && styles.segmentActive]}><Text style={order === 'sequence' ? styles.segmentTextActive : styles.segmentText}>顺序版</Text></Pressable><Pressable onPress={() => setOrder('random')} style={[styles.segmentItem, order === 'random' && styles.segmentActive]}><Text style={order === 'random' ? styles.segmentTextActive : styles.segmentText}>乱序版</Text></Pressable></View>

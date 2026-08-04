@@ -15,7 +15,8 @@ function parseVocabularyText(text) {
   const entries = [];
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
-    const match = line.match(/^([A-Za-z][A-Za-z-]*)\s*(?:—|-|:)\s*((?:n\.|v\.|adj\.|adv\.|prep\.|pron\.|conj\.|num\.)?)\s*(.*)$/);
+    const match = line.match(/^([A-Za-z][A-Za-z-]*)\s*(?:—|–|-|:)\s*((?:n\.|v\.|adj\.|adv\.|prep\.|pron\.|conj\.|num\.)?)\s*(.*)$/)
+      || line.match(/^([A-Za-z][A-Za-z-]*)\s+((?:n\.|v\.|adj\.|adv\.|prep\.|pron\.|conj\.|num\.)+)\s+(.+)$/);
     if (!match) continue;
     const key = match[1].toLowerCase();
     if (seen.has(key)) continue;

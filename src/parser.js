@@ -6,7 +6,8 @@ export function parseVocabularyText(text) {
   for (const raw of text.split(/\\r?\\n/)) {
     const line = raw.trim();
     if (!line || /^原 PDF|^未整理页面|^【/.test(line)) continue;
-    const match = line.match(new RegExp(`^([A-Za-z][A-Za-z-]*)\\s*(?:—|-|:)\\s*(${POS})?\\s*(.*)$`));
+    const match = line.match(new RegExp(`^([A-Za-z][A-Za-z-]*)\\s*(?:—|–|-|:)\\s*(${POS})?\\s*(.*)$`))
+      || line.match(new RegExp(`^([A-Za-z][A-Za-z-]*)\\s+(${POS})\\s+(.+)$`));
     if (!match) continue;
     const word = match[1].toLowerCase();
     if (seen.has(word)) continue;
