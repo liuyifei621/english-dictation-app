@@ -31,6 +31,7 @@ export default function App() {
   const [showAllAnswers, setShowAllAnswers] = useState(false);
   const [sessionEntries, setSessionEntries] = useState(sample);
   const timer = useRef(null);
+  const secondsRef = useRef(seconds);
   const activeRef = useRef(false);
   const soundRef = useRef(null);
 
@@ -50,6 +51,8 @@ export default function App() {
 
   const current = sessionEntries[index] || entries[0] || sample[0];
   const shownPrompt = mode === 'cn' ? `${current.meaning}` : current.word;
+
+  useEffect(() => { secondsRef.current = seconds; }, [seconds]);
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); activeRef.current = false; Speech.stop(); if (Platform.OS === 'web') window.speechSynthesis?.cancel(); soundRef.current?.unloadAsync(); }, []);
 
@@ -103,7 +106,7 @@ export default function App() {
       setIndex(nextIndex);
       setAnswerVisible(false);
       speakRepeated(list[nextIndex], () => scheduleNext(list, (nextIndex + 1) % list.length));
-    }, Math.max(1, Number(seconds) || 3) * 1000);
+      }, Math.max(0, Number(secondsRef.current) || 0) * 1000);
   };
 
   const start = () => {
