@@ -132,14 +132,18 @@ export default function App() {
 
   const testVoice = () => {
     const text = mode === 'cn' ? '这是中文语音测试' : 'This is an English voice test';
-    if (Platform.OS === 'web' && window.speechSynthesis) {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.speechSynthesis && window.SpeechSynthesisUtterance) {
       window.speechSynthesis.cancel();
       window.speechSynthesis.resume();
       const utterance = new window.SpeechSynthesisUtterance(text);
       utterance.lang = mode === 'cn' ? 'zh-CN' : 'en-US';
       utterance.rate = 0.82;
+      utterance.onerror = () => Alert.alert('语音不可用', '请检查电脑音量、浏览器是否静音，并使用 Chrome 或 Edge 打开。');
       window.speechSynthesis.speak(utterance);
-    } else Speech.speak(text, { language: mode === 'cn' ? 'zh-CN' : 'en-US', rate: 0.82 });
+      return;
+    }
+    if (Platform.OS === 'web') Alert.alert('浏览器不支持语音', '请改用 Chrome 或 Edge 打开网页版。');
+    else Speech.speak(text, { language: mode === 'cn' ? 'zh-CN' : 'en-US', rate: 0.82 });
   };
 
   const pickFile = async () => {
