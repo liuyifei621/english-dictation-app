@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "英语默写",
+    "slug": "english-dictation",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {"supportsTablet": true},
+    "android": {"adaptiveIcon": {"backgroundColor": "#F7F8FC"}},
+    "plugins": ["expo-document-picker"]
+  }
+}
