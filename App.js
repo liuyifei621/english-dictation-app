@@ -63,14 +63,20 @@ export default function App() {
   }, [sources, activeSourceIds]);
 
   const current = sessionEntries[index] || entries[0] || sample[0];
-  const shownPrompt = mode === 'cn' ? `${current.meaning}` : current.word;
+  const cleanSpeechText = (value) => {
+    const text = String(value || '').trim();
+    const bracket = text.match(/[（(]([^）)]*)[）)]/);
+    if (bracket) return bracket[1].trim();
+    return text.replace(/\b(?:n|v|adj|adv|prep|pron|conj|num|art|aux)\.\s*/gi, '').trim();
+  };
+  const shownPrompt = mode === 'cn' ? cleanSpeechText(current.meaning) : cleanSpeechText(current.word);
 
   useEffect(() => { secondsRef.current = seconds; }, [seconds]);
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); activeRef.current = false; Speech.stop(); if (Platform.OS === 'web') window.speechSynthesis?.cancel(); soundRef.current?.unloadAsync(); }, []);
 
   const speakRepeated = (entry, done) => {
-    const text = mode === 'cn' ? entry.meaning : entry.word;
+    const text = cleanSpeechText(mode === 'cn' ? entry.meaning : entry.word);
     let count = 0;
     const speakOnce = (onDone) => {
       let finished = false;
