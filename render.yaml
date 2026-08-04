@@ -8,3 +8,8 @@ services:
     envVars:
       - key: PORT
         value: 8787
+  - type: web
+    name: english-dictation-web
+    runtime: static
+    buildCommand: pnpm install --frozen-lockfile && pnpm exec expo export --platform web
+    staticPublishPath: ./dist
