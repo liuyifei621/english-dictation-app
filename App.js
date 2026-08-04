@@ -24,6 +24,7 @@ export default function App() {
   const [activeSourceIds, setActiveSourceIds] = useState(['sample']);
   const [importing, setImporting] = useState(false);
   const [manualText, setManualText] = useState('');
+  const importAbortRef = useRef(null);
   const [hydrated, setHydrated] = useState(false);
   const [mode, setMode] = useState('cn');
   const [order, setOrder] = useState('sequence');
@@ -218,12 +219,17 @@ export default function App() {
   };
 
   const pickFile = async () => {
+    if (importing) return;
     const result = await DocumentPicker.getDocumentAsync({ type: ['text/plain', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'], multiple: true, copyToCacheDirectory: true });
     if (result.canceled) return;
     let imported = 0;
     setImporting(true);
+    const controller = new AbortController();
+    importAbortRef.current = controller;
     for (const [fileIndex, file] of result.assets.entries()) {
       try {
+        if (controller.signal.aborted) break;
+        if (!/\.(txt|pdf|docx)$/i.test(file.name)) throw new Error('不支持此格式，请选择 Word、PDF 或 TXT 文件');
         setSourceName(`正在处理 ${fileIndex + 1}/${result.assets.length}：${file.name}`);
         let parsed;
         if (file.mimeType === 'text/plain' || /\\.txt$/i.test(file.name)) {
@@ -234,17 +240,24 @@ export default function App() {
           if (Platform.OS === 'web' && !uploadValue) uploadValue = await (await fetch(file.uri)).blob();
           if (!uploadValue) uploadValue = { uri: file.uri, name: file.name, type: file.mimeType || 'application/octet-stream' };
           body.append('file', uploadValue, file.name);
-          const response = await fetch(EXTRACTION_API_URL, { method: 'POST', body });
+          const response = await fetch(EXTRACTION_API_URL, { method: 'POST', body, signal: controller.signal });
           const payload = await response.json();
           if (!response.ok) throw new Error(payload.error || '文档识别失败');
           parsed = payload.entries || [];
         }
         if (!parsed.length) throw new Error('没有识别到词条');
         addSource(file.name, parsed); imported += parsed.length;
-      } catch (error) { Alert.alert('识别失败', `${file.name}\n${error.message}`); }
+      } catch (error) { if (error.name !== 'AbortError') Alert.alert('识别失败', `${file.name}\n${error.message}`); }
     }
     setImporting(false);
+    importAbortRef.current = null;
     if (imported) { setSourceName(result.assets.length === 1 ? result.assets[0].name : `${result.assets.length} 个文件`); Alert.alert('导入成功', `已合并 ${result.assets.length} 个文件，共新增 ${imported} 个单词`); }
+  };
+
+  const cancelImport = () => {
+    importAbortRef.current?.abort();
+    setImporting(false);
+    setSourceName('示例词库');
   };
 
   const addManualText = () => {
@@ -260,7 +273,7 @@ export default function App() {
   return <SafeAreaView style={styles.safe}><StatusBar style="dark" /><ScrollView contentContainerStyle={styles.page}>
     <Text style={styles.eyebrow}>ENGLISH DICTATION</Text><Text style={styles.title}>英语默写</Text>
     <Text style={styles.subtitle}>当前词库：{sourceName} · 共 {entries.length} 个单词 · 上传后按自己的节奏听写。</Text>
-    <Pressable style={styles.upload} onPress={pickFile} disabled={importing}><Text style={styles.uploadIcon}>＋</Text><View><Text style={styles.uploadTitle}>{importing ? '正在识别文件…' : '上传词汇文档'}</Text><Text style={styles.uploadHint}>{importing ? '请稍候，正在读取文档' : '支持一次选择多个 Word、PDF、TXT'}</Text></View></Pressable>
+    <Pressable style={styles.upload} onPress={importing ? cancelImport : pickFile}><Text style={styles.uploadIcon}>{importing ? '×' : '＋'}</Text><View><Text style={styles.uploadTitle}>{importing ? '停止识别' : '上传词汇文档'}</Text><Text style={styles.uploadHint}>{importing ? '点击这里立即停止当前处理' : '支持一次选择多个 Word、PDF、TXT'}</Text></View></Pressable>
     <View style={styles.card}><Text style={styles.sectionLabel}>直接输入词汇</Text><TextInput value={manualText} onChangeText={setManualText} multiline placeholder={'每行一条，例如：\napple — n. 苹果'} placeholderTextColor="#9296A8" style={styles.manualInput}/><Pressable style={styles.manualButton} onPress={addManualText}><Text style={styles.manualButtonText}>识别并添加</Text></Pressable></View>
     <View style={styles.sourcesCard}><Text style={styles.sectionLabel}>已添加文件（可选择、叠加或删除）</Text>{sources.filter((source) => source.id !== 'sample').length ? sources.filter((source) => source.id !== 'sample').map((source) => <View key={source.id} style={styles.sourceRow}><Pressable onPress={() => toggleSource(source.id)} style={[styles.checkButton, activeSourceIds.includes(source.id) && styles.checkButtonActive]}><Text style={styles.checkText}>{activeSourceIds.includes(source.id) ? '✓' : '○'}</Text></Pressable><View style={styles.sourceInfo}><Text style={styles.sourceName}>{source.name}</Text><Text style={styles.sourceCount}>{source.entries.length} 个单词 · {activeSourceIds.includes(source.id) ? '使用中' : '未选择'}</Text></View><Pressable onPress={() => removeSource(source.id)} style={styles.deleteButton}><Text style={styles.deleteText}>删除</Text></Pressable></View>) : <Text style={styles.emptySource}>还没有添加文件</Text>}</View>
     <View style={styles.card}><Text style={styles.sectionLabel}>默写模式</Text><View style={styles.segment}><Pressable onPress={() => setMode('cn')} style={[styles.segmentItem, mode === 'cn' && styles.segmentActive]}><Text style={mode === 'cn' ? styles.segmentTextActive : styles.segmentText}>中文 → 英文</Text></Pressable><Pressable onPress={() => setMode('en')} style={[styles.segmentItem, mode === 'en' && styles.segmentActive]}><Text style={mode === 'en' ? styles.segmentTextActive : styles.segmentText}>英文 → 中文</Text></Pressable></View>
