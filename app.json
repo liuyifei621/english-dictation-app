@@ -5,8 +5,24 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "ios": {"supportsTablet": true},
-    "android": {"adaptiveIcon": {"backgroundColor": "#F7F8FC"}},
-    "plugins": ["expo-document-picker"]
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.liuyifeis.englishdictation"
+    },
+    "android": {
+      "package": "com.liuyifeis.englishdictation",
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F8FC"
+      }
+    },
+    "plugins": [
+      "expo-document-picker"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b547a5dc-79da-4349-8ebd-5de785fb7e22"
+      }
+    },
+    "owner": "liuyifeis-team"
   }
 }
