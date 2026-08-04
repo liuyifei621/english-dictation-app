@@ -48,7 +48,7 @@ export default function App() {
         const saved = JSON.parse(value);
         if (saved.sources?.length) { setSources(saved.sources); setActiveSourceIds(saved.activeSourceIds || saved.sources.map((source) => source.id)); }
         else if (saved.entries?.length) { setEntries(saved.entries); setSources([{ id: 'legacy', name: saved.sourceName || '已导入词库', entries: saved.entries }]); }
-        if (saved.sourceName) setSourceName(saved.sourceName);
+        if (saved.sourceName && !/^正在处理/.test(saved.sourceName)) setSourceName(saved.sourceName);
       }
     }).catch(() => {}).finally(() => setHydrated(true));
   }, []);
