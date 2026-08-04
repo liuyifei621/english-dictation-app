@@ -11,7 +11,7 @@ function makeEntry(word, pos, meaning) {
 export function parseVocabularyText(text) {
   const result = [];
   const seen = new Set();
-  const lines = text.split(/\r?\n/).map((raw) => raw.trim()).filter(Boolean);
+  const lines = text.split(/\r?\n/).flatMap((raw) => raw.split(/\s+(?=[A-Za-z][A-Za-z-]*(?:\s+(?:n\.|v\.|adj\.|adv\.|prep\.|pron\.|conj\.|num\.|art\.|aux\.))?\s+[\u3400-\u9fff])/i)).map((raw) => raw.trim()).filter(Boolean);
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i].replace(/[|｜]/g, ' ');
     if (/^原 PDF|^未整理页面|^【/.test(line)) continue;

@@ -263,7 +263,7 @@ export default function App() {
   const addManualText = () => {
     if (!manualText.trim()) return;
     try {
-      const parsed = parseVocabularyFileText(manualText);
+      const parsed = parseVocabularyFileText(manualText).sort((a, b) => a.word.localeCompare(b.word, 'en', { sensitivity: 'base' }));
       addSource('手动输入词库', parsed);
       setManualText('');
       Alert.alert('添加成功', `已添加 ${parsed.length} 个单词`);
