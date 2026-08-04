@@ -85,7 +85,19 @@ export default function App() {
       if (!activeRef.current && done) return;
       count += 1;
       if (mode === 'cn') { speakOnce(() => count < repeatCount ? play() : done?.()); return; }
-      if (Platform.OS === 'web') { speakOnce(() => count < repeatCount ? play() : done?.()); return; }
+      if (Platform.OS === 'web') {
+        findEnglishAudio(entry.word).then((url) => {
+          if (!url || typeof window === 'undefined' || !window.Audio) { speakOnce(() => count < repeatCount ? play() : done?.()); return; }
+          const audio = new window.Audio(url);
+          let finished = false;
+          const fallback = () => { if (finished) return; finished = true; audio.onerror = null; audio.onended = null; speakOnce(() => count < repeatCount ? play() : done?.()); };
+          audio.onended = () => { if (finished) return; finished = true; count < repeatCount ? play() : done?.(); };
+          audio.onerror = fallback;
+          audio.play().catch(fallback);
+          setTimeout(fallback, 7000);
+        }).catch(() => speakOnce(() => count < repeatCount ? play() : done?.()));
+        return;
+      }
       findEnglishAudio(entry.word).then(async (url) => {
         if (!url) {
           speakOnce(() => count < repeatCount ? play() : done?.());
