@@ -14,10 +14,15 @@ app.use((req, res, next) => { res.setHeader('Access-Control-Allow-Origin', '*');
 function parseVocabularyText(text) {
   const seen = new Set();
   const entries = [];
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
+  const lines = text.split(/\r?\n/).map((raw) => raw.trim()).filter(Boolean);
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
     const match = line.match(/^([A-Za-z][A-Za-z-]*)\s*(?:—|–|-|:)\s*((?:n\.|v\.|adj\.|adv\.|prep\.|pron\.|conj\.|num\.)?)\s*(.*)$/)
       || line.match(/^([A-Za-z][A-Za-z-]*)\s+((?:n\.|v\.|adj\.|adv\.|prep\.|pron\.|conj\.|num\.)+)\s+(.+)$/);
+    if (!match && /^[A-Za-z][A-Za-z-]*(?:\s+(?:n\.|v\.|adj\.|adv\.|prep\.|pron\.|conj\.|num\.))?$/.test(line) && lines[i + 1] && /[\u3400-\u9fff]/.test(lines[i + 1])) {
+      const parts = line.split(/\s+/);
+      match = [null, parts[0], parts[1] || '', lines[++i]];
+    }
     const looseMatch = !match && line.match(/^([A-Za-z][A-Za-z-]*)\s+(.+)$/);
     if (!match && !looseMatch) continue;
     const parsed = match || [null, looseMatch[1], '', looseMatch[2]];
