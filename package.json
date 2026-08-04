@@ -2,7 +2,7 @@
   "name": "english-dictation-mobile",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@10.14.0",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
