@@ -21,6 +21,7 @@ export default function App() {
   const [entries, setEntries] = useState(sample);
   const [sourceName, setSourceName] = useState('示例词库');
   const [sources, setSources] = useState([{ id: 'sample', name: '示例词库', entries: sample }]);
+  const [importing, setImporting] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [mode, setMode] = useState('cn');
   const [order, setOrder] = useState('sequence');
@@ -52,6 +53,11 @@ export default function App() {
   useEffect(() => {
     if (hydrated && entries.length) AsyncStorage.setItem('english-dictation:last-library', JSON.stringify({ entries, sourceName, sources })).catch(() => {});
   }, [entries, sourceName, sources, hydrated]);
+
+  useEffect(() => {
+    const merged = sources.flatMap((source) => source.entries);
+    setEntries(merged.length ? merged : sample);
+  }, [sources]);
 
   const current = sessionEntries[index] || entries[0] || sample[0];
   const shownPrompt = mode === 'cn' ? `${current.meaning}` : current.word;
@@ -178,7 +184,6 @@ export default function App() {
     const source = { id: `${Date.now()}-${Math.random()}`, name, entries: parsed };
     setSources((currentSources) => {
       const nextSources = [...currentSources.filter((item) => item.id !== 'sample'), source];
-      setEntries(nextSources.flatMap((item) => item.entries));
       return nextSources;
     });
     setIndex(0); setAnswerVisible(false); setShowAllAnswers(false);
@@ -188,9 +193,7 @@ export default function App() {
   const removeSource = (id) => {
     setSources((currentSources) => {
       const nextSources = currentSources.filter((source) => source.id !== id);
-      const nextEntries = nextSources.flatMap((source) => source.entries);
-      setEntries(nextEntries.length ? nextEntries : sample);
-      return nextEntries.length ? nextSources : [{ id: 'sample', name: '示例词库', entries: sample }];
+      return nextSources.length ? nextSources : [{ id: 'sample', name: '示例词库', entries: sample }];
     });
     setIndex(0); setAnswerVisible(false); setShowAllAnswers(false);
   };
@@ -199,8 +202,10 @@ export default function App() {
     const result = await DocumentPicker.getDocumentAsync({ type: ['text/plain', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/*'], multiple: true, copyToCacheDirectory: true });
     if (result.canceled) return;
     let imported = 0;
-    for (const file of result.assets) {
+    setImporting(true);
+    for (const [fileIndex, file] of result.assets.entries()) {
       try {
+        setSourceName(`正在处理 ${fileIndex + 1}/${result.assets.length}：${file.name}`);
         let parsed;
         if (file.mimeType === 'text/plain' || /\\.txt$/i.test(file.name)) {
           parsed = parseVocabularyFileText(await new File(file.uri).text());
@@ -219,13 +224,14 @@ export default function App() {
         addSource(file.name, parsed); imported += parsed.length;
       } catch (error) { Alert.alert('识别失败', `${file.name}\n${error.message}`); }
     }
-    if (imported) Alert.alert('导入成功', `已合并 ${result.assets.length} 个文件，共新增 ${imported} 个单词`);
+    setImporting(false);
+    if (imported) { setSourceName(result.assets.length === 1 ? result.assets[0].name : `${result.assets.length} 个文件`); Alert.alert('导入成功', `已合并 ${result.assets.length} 个文件，共新增 ${imported} 个单词`); }
   };
 
   return <SafeAreaView style={styles.safe}><StatusBar style="dark" /><ScrollView contentContainerStyle={styles.page}>
     <Text style={styles.eyebrow}>ENGLISH DICTATION</Text><Text style={styles.title}>英语默写</Text>
     <Text style={styles.subtitle}>当前词库：{sourceName} · 共 {entries.length} 个单词 · 上传后按自己的节奏听写。</Text>
-    <Pressable style={styles.upload} onPress={pickFile}><Text style={styles.uploadIcon}>＋</Text><View><Text style={styles.uploadTitle}>上传词汇文档</Text><Text style={styles.uploadHint}>支持 Word、PDF、图片</Text></View></Pressable>
+    <Pressable style={styles.upload} onPress={pickFile} disabled={importing}><Text style={styles.uploadIcon}>＋</Text><View><Text style={styles.uploadTitle}>{importing ? '正在识别文件…' : '上传词汇文档'}</Text><Text style={styles.uploadHint}>{importing ? '请稍候，图片识别可能需要一些时间' : '支持一次选择多个 Word、PDF、图片'}</Text></View></Pressable>
     <View style={styles.sourcesCard}><Text style={styles.sectionLabel}>已添加文件（可叠加或删除）</Text>{sources.filter((source) => source.id !== 'sample').length ? sources.filter((source) => source.id !== 'sample').map((source) => <View key={source.id} style={styles.sourceRow}><View style={styles.sourceInfo}><Text style={styles.sourceName}>{source.name}</Text><Text style={styles.sourceCount}>{source.entries.length} 个单词</Text></View><Pressable onPress={() => removeSource(source.id)} style={styles.deleteButton}><Text style={styles.deleteText}>删除</Text></Pressable></View>) : <Text style={styles.emptySource}>还没有添加文件</Text>}</View>
     <View style={styles.card}><Text style={styles.sectionLabel}>默写模式</Text><View style={styles.segment}><Pressable onPress={() => setMode('cn')} style={[styles.segmentItem, mode === 'cn' && styles.segmentActive]}><Text style={mode === 'cn' ? styles.segmentTextActive : styles.segmentText}>中文 → 英文</Text></Pressable><Pressable onPress={() => setMode('en')} style={[styles.segmentItem, mode === 'en' && styles.segmentActive]}><Text style={mode === 'en' ? styles.segmentTextActive : styles.segmentText}>英文 → 中文</Text></Pressable></View>
       <Text style={styles.sectionLabel}>出题顺序</Text><View style={styles.segment}><Pressable onPress={() => setOrder('sequence')} style={[styles.segmentItem, order === 'sequence' && styles.segmentActive]}><Text style={order === 'sequence' ? styles.segmentTextActive : styles.segmentText}>顺序版</Text></Pressable><Pressable onPress={() => setOrder('random')} style={[styles.segmentItem, order === 'random' && styles.segmentActive]}><Text style={order === 'random' ? styles.segmentTextActive : styles.segmentText}>乱序版</Text></Pressable></View>
