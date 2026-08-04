@@ -17,11 +17,13 @@ function parseVocabularyText(text) {
     const line = raw.trim();
     const match = line.match(/^([A-Za-z][A-Za-z-]*)\s*(?:—|–|-|:)\s*((?:n\.|v\.|adj\.|adv\.|prep\.|pron\.|conj\.|num\.)?)\s*(.*)$/)
       || line.match(/^([A-Za-z][A-Za-z-]*)\s+((?:n\.|v\.|adj\.|adv\.|prep\.|pron\.|conj\.|num\.)+)\s+(.+)$/);
-    if (!match) continue;
-    const key = match[1].toLowerCase();
+    const looseMatch = !match && line.match(/^([A-Za-z][A-Za-z-]*)\s+(.+)$/);
+    if (!match && !looseMatch) continue;
+    const parsed = match || [null, looseMatch[1], '', looseMatch[2]];
+    const key = parsed[1].toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    entries.push({ word: match[1], pos: match[2], meaning: match[3].trim() });
+    entries.push({ word: parsed[1], pos: parsed[2], meaning: parsed[3].trim() });
   }
   return entries;
 }
@@ -32,6 +34,7 @@ async function extractText(file) {
   if (ext === '.pdf') return (await pdfParse(await fs.readFile(file.path))).text;
   if (/\.(png|jpe?g|webp|bmp)$/i.test(ext)) {
     const worker = await createWorker('eng+chi_sim');
+    await worker.setParameters({ preserve_interword_spaces: '1' });
     const { data } = await worker.recognize(file.path);
     await worker.terminate();
     return data.text;
