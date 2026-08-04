@@ -30,6 +30,7 @@ export default function App() {
   const [index, setIndex] = useState(0);
   const [answerVisible, setAnswerVisible] = useState(false);
   const [showAllAnswers, setShowAllAnswers] = useState(false);
+  const [revealedCount, setRevealedCount] = useState(0);
   const [sessionEntries, setSessionEntries] = useState(sample);
   const timer = useRef(null);
   const secondsRef = useRef(seconds);
@@ -127,13 +128,13 @@ export default function App() {
   const start = () => {
     if (!entries.length) return;
     const list = order === 'sequence' ? entries : [...entries].sort(() => Math.random() - 0.5);
-    setSessionEntries(list); setIndex(0); setRunning(true); setAnswerVisible(false); setShowAllAnswers(false); activeRef.current = true;
+    setSessionEntries(list); setIndex(0); setRunning(true); setAnswerVisible(false); setShowAllAnswers(false); setRevealedCount(0); activeRef.current = true;
     speakRepeated(list[0], () => scheduleNext(list, 1 % list.length));
   };
 
   const stop = () => {
     if (timer.current) clearTimeout(timer.current);
-    Speech.stop(); if (Platform.OS === 'web') window.speechSynthesis?.cancel(); activeRef.current = false; soundRef.current?.stopAsync().catch(() => {}); soundRef.current?.unloadAsync().catch(() => {}); soundRef.current = null; setRunning(false); setAnswerVisible(true); setShowAllAnswers(true);
+    Speech.stop(); if (Platform.OS === 'web') window.speechSynthesis?.cancel(); activeRef.current = false; soundRef.current?.stopAsync().catch(() => {}); soundRef.current?.unloadAsync().catch(() => {}); soundRef.current = null; setRunning(false); setAnswerVisible(true); setRevealedCount(Math.min(index + 1, sessionEntries.length)); setShowAllAnswers(true);
   };
 
   /* 保留一个显式的手动推进入口，便于后续增加“下一个”按钮。 */
@@ -219,7 +220,7 @@ export default function App() {
       <View style={styles.row}><Text style={styles.sectionLabel}>停顿时间</Text><View style={styles.seconds}><TextInput value={seconds} onChangeText={setSeconds} keyboardType="number-pad" style={styles.secondsInput}/><Text style={styles.secondsUnit}>秒</Text></View></View>
       <Text style={styles.sectionLabel}>每个词播报次数</Text><View style={styles.segment}>{[1,2,3,4].map((count) => <Pressable key={count} onPress={() => setRepeatCount(count)} style={[styles.segmentItem, repeatCount === count && styles.segmentActive]}><Text style={repeatCount === count ? styles.segmentTextActive : styles.segmentText}>{count}遍</Text></Pressable>)}</View>
     </View>
-    <View style={styles.practice}><View style={styles.practiceTop}><Text style={styles.practiceLabel}>{running ? '正在默写' : '准备开始'}</Text><Text style={styles.counter}>{index + 1} / {entries.length}</Text></View><Text style={styles.prompt}>{running ? shownPrompt : '点击开始，听题后默写'}</Text>{showAllAnswers ? <View style={styles.answerList}>{sessionEntries.map((entry, answerIndex) => <View key={`${entry.word}-${answerIndex}`} style={styles.answer}><Text style={styles.answerWord}>{answerIndex + 1}. {entry.word}</Text><Text style={styles.answerMeta}>{entry.pos}  {entry.meaning}</Text></View>)}</View> : answerVisible && <View style={styles.answer}><Text style={styles.answerWord}>{current.word}</Text><Text style={styles.answerMeta}>{current.pos}  {current.meaning}</Text></View>}<View style={styles.actions}>{running ? <Pressable style={styles.stop} onPress={stop}><Text style={styles.stopText}>停止并显示全部答案</Text></Pressable> : <Pressable style={styles.start} onPress={start}><Text style={styles.startText}>开始默写</Text></Pressable>}</View></View>
+    <View style={styles.practice}><View style={styles.practiceTop}><Text style={styles.practiceLabel}>{running ? '正在默写' : '准备开始'}</Text><Text style={styles.counter}>{index + 1} / {entries.length}</Text></View><Text style={styles.prompt}>{running ? shownPrompt : '点击开始，听题后默写'}</Text>{showAllAnswers ? <View style={styles.answerList}>{sessionEntries.slice(0, revealedCount).map((entry, answerIndex) => <View key={`${entry.word}-${answerIndex}`} style={styles.answer}><Text style={styles.answerWord}>{answerIndex + 1}. {entry.word}</Text><Text style={styles.answerMeta}>{entry.pos}  {entry.meaning}</Text></View>)}</View> : answerVisible && <View style={styles.answer}><Text style={styles.answerWord}>{current.word}</Text><Text style={styles.answerMeta}>{current.pos}  {current.meaning}</Text></View>}<View style={styles.actions}>{running ? <Pressable style={styles.stop} onPress={stop}><Text style={styles.stopText}>停止并显示已默写答案</Text></Pressable> : <Pressable style={styles.start} onPress={start}><Text style={styles.startText}>开始默写</Text></Pressable>}</View></View>
     <Pressable style={styles.voiceTest} onPress={testVoice}><Text style={styles.voiceTestText}>🔊 测试声音</Text></Pressable><Text style={styles.note}>英文发音使用设备英语语音；联网后可接入词典标准音频。</Text>
   </ScrollView></SafeAreaView>;
 }
