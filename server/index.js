@@ -8,6 +8,16 @@ import path from 'node:path';
 import sharp from 'sharp';
 
 const app = express();
+let ocrWorkerPromise;
+async function getOcrWorker() {
+  if (!ocrWorkerPromise) {
+    ocrWorkerPromise = createWorker('eng+chi_sim').then(async (worker) => {
+      await worker.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: '6' });
+      return worker;
+    }).catch((error) => { ocrWorkerPromise = null; throw error; });
+  }
+  return ocrWorkerPromise;
+}
 const upload = multer({ dest: path.join(process.cwd(), 'tmp'), limits: { fileSize: 15 * 1024 * 1024 } });
 app.use((req, res, next) => { res.setHeader('Access-Control-Allow-Origin', '*'); res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type'); if (req.method === 'OPTIONS') return res.sendStatus(204); next(); });
 
@@ -51,11 +61,9 @@ async function extractText(file) {
       sharp(enhanced).extract({ left: 0, top: 0, width: Math.floor(enhancedWidth / 2), height: enhancedHeight }).toBuffer(),
       sharp(enhanced).extract({ left: Math.floor(enhancedWidth / 2), top: 0, width: Math.ceil(enhancedWidth / 2), height: enhancedHeight }).toBuffer(),
     ]) : [enhanced];
-    const worker = await createWorker('eng+chi_sim');
-    await worker.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: '6' });
+    const worker = await getOcrWorker();
     const results = [];
     for (const buffer of buffers) results.push((await worker.recognize(buffer)).data.text);
-    await worker.terminate();
     return results.join('\n');
   }
   return await fs.readFile(file.path, 'utf8');
