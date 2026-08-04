@@ -174,9 +174,12 @@ export default function App() {
     } else {
       try {
         const body = new FormData();
-        const uploadValue = Platform.OS === 'web' && file.file
-          ? file.file
-          : { uri: file.uri, name: file.name, type: file.mimeType || 'application/octet-stream' };
+        let uploadValue = Platform.OS === 'web' ? file.file : null;
+        if (Platform.OS === 'web' && !uploadValue) {
+          const blobResponse = await fetch(file.uri);
+          uploadValue = await blobResponse.blob();
+        }
+        if (!uploadValue) uploadValue = { uri: file.uri, name: file.name, type: file.mimeType || 'application/octet-stream' };
         body.append('file', uploadValue, file.name);
         const response = await fetch(EXTRACTION_API_URL, { method: 'POST', body });
         const payload = await response.json();
