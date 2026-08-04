@@ -174,7 +174,10 @@ export default function App() {
     } else {
       try {
         const body = new FormData();
-        body.append('file', { uri: file.uri, name: file.name, type: file.mimeType || 'application/octet-stream' });
+        const uploadValue = Platform.OS === 'web' && file.file
+          ? file.file
+          : { uri: file.uri, name: file.name, type: file.mimeType || 'application/octet-stream' };
+        body.append('file', uploadValue, file.name);
         const response = await fetch(EXTRACTION_API_URL, { method: 'POST', body });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || '文档识别失败');
