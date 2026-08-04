@@ -63,20 +63,20 @@ export default function App() {
   }, [sources, activeSourceIds]);
 
   const current = sessionEntries[index] || entries[0] || sample[0];
-  const cleanSpeechText = (value) => {
-    const text = String(value || '').trim();
-    const bracket = text.match(/[（(]([^）)]*)[）)]/);
-    if (bracket) return bracket[1].trim();
-    return text.replace(/\b(?:n|v|adj|adv|prep|pron|conj|num|art|aux)\.\s*/gi, '').trim();
+  const cleanSpeechText = (value, languageMode) => {
+    let text = String(value || '').trim().replace(/[（(]([^）)]*)[）)]/g, '$1');
+    text = text.replace(/^\s*(?:n|v|adj|adv|prep|pron|conj|num|art|aux)\.?\s*/i, '').replace(/\b(?:n|v|adj|adv|prep|pron|conj|num|art|aux)\.\s*/gi, '');
+    if (languageMode === 'cn') return text.replace(/[；;，,、：:]/g, '').trim();
+    return text.replace(/[^A-Za-z\s-]/g, ' ').replace(/\s+/g, ' ').trim();
   };
-  const shownPrompt = mode === 'cn' ? cleanSpeechText(current.meaning) : cleanSpeechText(current.word);
+  const shownPrompt = mode === 'cn' ? cleanSpeechText(current.meaning, 'cn') : cleanSpeechText(current.word, 'en');
 
   useEffect(() => { secondsRef.current = seconds; }, [seconds]);
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); activeRef.current = false; Speech.stop(); if (Platform.OS === 'web') window.speechSynthesis?.cancel(); soundRef.current?.unloadAsync(); }, []);
 
   const speakRepeated = (entry, done) => {
-    const text = cleanSpeechText(mode === 'cn' ? entry.meaning : entry.word);
+    const text = cleanSpeechText(mode === 'cn' ? entry.meaning : entry.word, mode);
     let count = 0;
     const speakOnce = (onDone) => {
       let finished = false;
