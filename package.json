@@ -2,6 +2,7 @@
   "name": "english-dictation-mobile",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@11.9.0",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
@@ -18,8 +19,5 @@
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
     "react-native": "0.79.2"
-  },
-  "devDependencies": {
-    "eas-cli": "^21.4.0"
   }
 }
