@@ -85,6 +85,7 @@ export default function App() {
       if (!activeRef.current && done) return;
       count += 1;
       if (mode === 'cn') { speakOnce(() => count < repeatCount ? play() : done?.()); return; }
+      if (Platform.OS === 'web') { speakOnce(() => count < repeatCount ? play() : done?.()); return; }
       findEnglishAudio(entry.word).then(async (url) => {
         if (!url) {
           speakOnce(() => count < repeatCount ? play() : done?.());
