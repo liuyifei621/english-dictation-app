@@ -5,6 +5,7 @@ import pdfParse from 'pdf-parse';
 import { createWorker } from 'tesseract.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import sharp from 'sharp';
 
 const app = express();
 const upload = multer({ dest: path.join(process.cwd(), 'tmp'), limits: { fileSize: 15 * 1024 * 1024 } });
@@ -33,11 +34,24 @@ async function extractText(file) {
   if (ext === '.docx') return (await mammoth.extractRawText({ path: file.path })).value;
   if (ext === '.pdf') return (await pdfParse(await fs.readFile(file.path))).text;
   if (/\.(png|jpe?g|webp|bmp)$/i.test(ext)) {
+    const image = sharp(file.path);
+    const metadata = await image.metadata();
+    const width = metadata.width || 0;
+    const height = metadata.height || 0;
+    const enhanced = await image.resize({ width: Math.max(width, 1800), withoutEnlargement: false }).grayscale().normalize().sharpen().png().toBuffer();
+    const enhancedMeta = await sharp(enhanced).metadata();
+    const enhancedWidth = enhancedMeta.width || Math.max(width, 1800);
+    const enhancedHeight = enhancedMeta.height || height;
+    const buffers = width > height * 1.15 ? await Promise.all([
+      sharp(enhanced).extract({ left: 0, top: 0, width: Math.floor(enhancedWidth / 2), height: enhancedHeight }).toBuffer(),
+      sharp(enhanced).extract({ left: Math.floor(enhancedWidth / 2), top: 0, width: Math.ceil(enhancedWidth / 2), height: enhancedHeight }).toBuffer(),
+    ]) : [enhanced];
     const worker = await createWorker('eng+chi_sim');
-    await worker.setParameters({ preserve_interword_spaces: '1' });
-    const { data } = await worker.recognize(file.path);
+    await worker.setParameters({ preserve_interword_spaces: '1', tessedit_pageseg_mode: '6' });
+    const results = [];
+    for (const buffer of buffers) results.push((await worker.recognize(buffer)).data.text);
     await worker.terminate();
-    return data.text;
+    return results.join('\n');
   }
   return await fs.readFile(file.path, 'utf8');
 }
